@@ -46,5 +46,10 @@ def webhook():
         return {"message": "wrong transaction_type"}
 
 
+@app.route('/', methods=['GET'])
+def health_check():
+    return {"message": "all good"}
+
+
 if __name__ == '__main__':
     app.run(port=5000)
