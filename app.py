@@ -1,8 +1,13 @@
 import requests
 from flask import Flask, request
 import os
+
+from log_config import configure_logging
+import logging
 from dotenv import load_dotenv
 load_dotenv()
+configure_logging()
+
 
 app = Flask(__name__)
 
@@ -35,12 +40,16 @@ def webhook():
             'APCA-API-KEY-ID': ALPACA_BUY_API_KEY,
             'APCA-API-SECRET-KEY': ALPACA_BUY_SECRET_KEY
         })
+        logging.info(f"Buy order place for quantity {quantity}")
+        logging.info(response.json())
         return response.json()
     elif transaction_type == "sell":
         response = requests.post(ALPACA_SELL_ENDPOINT, json=order, headers={
             'APCA-API-KEY-ID': ALPACA_SELL_API_KEY,
             'APCA-API-SECRET-KEY': ALPACA_SELL_SECRET_KEY
         })
+        logging.info(f"sell order place for quantity {quantity}")
+        logging.info(response.json())
         return response.json()
     else:
         return {"message": "wrong transaction_type"}
