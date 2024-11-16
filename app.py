@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
 
 from log_config import configure_logging
@@ -55,9 +55,10 @@ def webhook():
         return {"message": "wrong transaction_type"}
 
 
-@app.route('/', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
-    return {"message": "all good"}
+    # Return a JSON response indicating the app is healthy
+    return jsonify(status="healthy", message="API is running"), 200
 
 
 if __name__ == '__main__':
