@@ -31,13 +31,13 @@ def webhook():
     }
 
     if transaction_type == "buy":
-        response = requests.post(ALPACA_BUY_API_KEY, json=order, headers={
+        response = requests.post(ALPACA_BUY_ENDPOINT, json=order, headers={
             'APCA-API-KEY-ID': ALPACA_BUY_API_KEY,
             'APCA-API-SECRET-KEY': ALPACA_BUY_SECRET_KEY
         })
         return response.json()
     elif transaction_type == "sell":
-        response = requests.post(ALPACA_SELL_API_KEY, json=order, headers={
+        response = requests.post(ALPACA_SELL_ENDPOINT, json=order, headers={
             'APCA-API-KEY-ID': ALPACA_SELL_API_KEY,
             'APCA-API-SECRET-KEY': ALPACA_SELL_SECRET_KEY
         })
