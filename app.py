@@ -25,7 +25,7 @@ def webhook():
     data = request.json
     transaction_type = data['transaction_type'].lower()
     quantity = data['quantity']
-    ticker = "SPY"
+    ticker = data['ticker']
 
     order = {
         'symbol': ticker,
