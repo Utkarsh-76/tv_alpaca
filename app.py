@@ -23,36 +23,37 @@ ALPACA_SELL_ENDPOINT = os.getenv("ALPACA_SELL_ENDPOINT")
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
-    transaction_type = data['transaction_type'].lower()
-    quantity = data['quantity']
-    ticker = data['ticker']
-
-    order = {
-        'symbol': ticker,
-        'qty': quantity,
-        'side': transaction_type,
-        'type': 'market',
-        'time_in_force': 'gtc'
-    }
-
-    if transaction_type == "buy":
-        response = requests.post(ALPACA_BUY_ENDPOINT, json=order, headers={
-            'APCA-API-KEY-ID': ALPACA_BUY_API_KEY,
-            'APCA-API-SECRET-KEY': ALPACA_BUY_SECRET_KEY
-        })
-        logging.info(f"Buy order place for quantity {quantity}")
-        logging.info(response.json())
-        return response.json()
-    elif transaction_type == "sell":
-        response = requests.post(ALPACA_SELL_ENDPOINT, json=order, headers={
-            'APCA-API-KEY-ID': ALPACA_SELL_API_KEY,
-            'APCA-API-SECRET-KEY': ALPACA_SELL_SECRET_KEY
-        })
-        logging.info(f"sell order place for quantity {quantity}")
-        logging.info(response.json())
-        return response.json()
-    else:
-        return {"message": "wrong transaction_type"}
+    logging.info(data)
+    # transaction_type = data['transaction_type'].lower()
+    # quantity = data['quantity']
+    # ticker = data['ticker']
+    #
+    # order = {
+    #     'symbol': ticker,
+    #     'qty': quantity,
+    #     'side': transaction_type,
+    #     'type': 'market',
+    #     'time_in_force': 'gtc'
+    # }
+    #
+    # if transaction_type == "buy":
+    #     response = requests.post(ALPACA_BUY_ENDPOINT, json=order, headers={
+    #         'APCA-API-KEY-ID': ALPACA_BUY_API_KEY,
+    #         'APCA-API-SECRET-KEY': ALPACA_BUY_SECRET_KEY
+    #     })
+    #     logging.info(f"Buy order place for quantity {quantity}")
+    #     logging.info(response.json())
+    #     return response.json()
+    # elif transaction_type == "sell":
+    #     response = requests.post(ALPACA_SELL_ENDPOINT, json=order, headers={
+    #         'APCA-API-KEY-ID': ALPACA_SELL_API_KEY,
+    #         'APCA-API-SECRET-KEY': ALPACA_SELL_SECRET_KEY
+    #     })
+    #     logging.info(f"sell order place for quantity {quantity}")
+    #     logging.info(response.json())
+    #     return response.json()
+    # else:
+    #     return {"message": "wrong transaction_type"}
 
 
 @app.route('/health', methods=['GET'])
