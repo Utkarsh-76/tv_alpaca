@@ -2,6 +2,7 @@ import requests
 from flask import Flask, request, jsonify
 import os
 import json
+from datetime import datetime, time
 from dir_path import base_dirname
 
 from log_config import configure_logging
@@ -24,6 +25,9 @@ ALPACA_SELL_ENDPOINT = os.getenv("ALPACA_SELL_ENDPOINT")
 # File path for state persistence
 STATE_FILE = os.path.join(base_dirname, 'order_state.json')
 
+# Reset time (6 AM)
+RESET_TIME = time(6, 0, 0)
+
 
 def load_state():
     """Load state from file, create if doesn't exist"""
@@ -34,7 +38,8 @@ def load_state():
         # Initialize default state if file doesn't exist
         default_state = {
             'last_transaction_type': None,
-            'consecutive_count': 0
+            'consecutive_count': 0,
+            'last_reset_date': datetime.now().date().isoformat()
         }
         save_state(default_state)
         return default_state
@@ -42,7 +47,8 @@ def load_state():
         logging.error("Error decoding state file, resetting to default")
         default_state = {
             'last_transaction_type': None,
-            'consecutive_count': 0
+            'consecutive_count': 0,
+            'last_reset_date': datetime.now().date().isoformat()
         }
         save_state(default_state)
         return default_state
@@ -54,6 +60,31 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 
+def check_and_reset_state(order_state):
+    """Check if state needs to be reset based on time and date"""
+    now = datetime.now()
+    current_date = now.date().isoformat()
+    current_time = now.time()
+
+    last_reset_date = order_state.get('last_reset_date', current_date)
+
+    # Check if we've crossed 6 AM boundary
+    if last_reset_date != current_date and current_time >= RESET_TIME:
+        logging.info(f"Resetting state - crossed 6 AM boundary. Last reset: {last_reset_date}, Current: {current_date}")
+        order_state['last_transaction_type'] = None
+        order_state['consecutive_count'] = 0
+        order_state['last_reset_date'] = current_date
+        save_state(order_state)
+        return True
+
+    # Handle case where last_reset_date is missing (backward compatibility)
+    if 'last_reset_date' not in order_state:
+        order_state['last_reset_date'] = current_date
+        save_state(order_state)
+
+    return False
+
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
@@ -62,6 +93,11 @@ def webhook():
     ticker = data['ticker']
 
     order_state = load_state()
+
+    # Check and reset if needed
+    was_reset = check_and_reset_state(order_state)
+    if was_reset:
+        logging.info("State was automatically reset at 6 AM boundary")
 
     # Update state and calculate quantity
     if order_state['last_transaction_type'] == transaction_type:
