@@ -14,13 +14,15 @@ configure_logging()
 
 app = Flask(__name__)
 
-ALPACA_BUY_API_KEY = os.getenv("ALPACA_BUY_API_KEY")
-ALPACA_BUY_SECRET_KEY = os.getenv("ALPACA_BUY_SECRET_KEY")
-ALPACA_BUY_ENDPOINT = os.getenv("ALPACA_BUY_ENDPOINT")
+# Live account
+ALPACA_LIVE_API_KEY = os.getenv("ALPACA_LIVE_API_KEY")
+ALPACA_LIVE_SECRET_KEY = os.getenv("ALPACA_LIVE_SECRET_KEY")
+ALPACA_LIVE_ENDPOINT = os.getenv("ALPACA_LIVE_ENDPOINT")
 
-ALPACA_SELL_API_KEY = os.getenv("ALPACA_SELL_API_KEY")
-ALPACA_SELL_SECRET_KEY = os.getenv("ALPACA_SELL_SECRET_KEY")
-ALPACA_SELL_ENDPOINT = os.getenv("ALPACA_SELL_ENDPOINT")
+# Paper account
+ALPACA_PAPER_API_KEY = os.getenv("ALPACA_PAPER_API_KEY")
+ALPACA_PAPER_SECRET_KEY = os.getenv("ALPACA_PAPER_SECRET_KEY")
+ALPACA_PAPER_ENDPOINT = os.getenv("ALPACA_PAPER_ENDPOINT")
 
 # File path for state persistence
 STATE_FILE = os.path.join(base_dirname, 'order_state.json')
@@ -35,7 +37,6 @@ def load_state():
         with open(STATE_FILE, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        # Initialize default state if file doesn't exist
         default_state = {
             'last_transaction_type': None,
             'consecutive_count': 0,
@@ -85,6 +86,25 @@ def check_and_reset_state(order_state):
     return False
 
 
+def place_order(label, endpoint, api_key, secret_key, order):
+    """Send an order to a single Alpaca endpoint and return the result."""
+    try:
+        response = requests.post(
+            endpoint,
+            json=order,
+            headers={
+                'APCA-API-KEY-ID': api_key,
+                'APCA-API-SECRET-KEY': secret_key
+            }
+        )
+        result = response.json()
+        logging.info(f"[{label}] Order response: {result}")
+        return {"status": "ok", "response": result}
+    except Exception as e:
+        logging.error(f"[{label}] Order failed: {e}")
+        return {"status": "error", "error": str(e)}
+
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
@@ -114,6 +134,11 @@ def webhook():
     # Save updated state
     save_state(order_state)
 
+    logging.info(
+        f"Transaction: {transaction_type}, Consecutive Count: {order_state['consecutive_count']}, "
+        f"Multiplier: {multiplier}, Quantity: {quantity}"
+    )
+
     order = {
         'symbol': ticker,
         'qty': quantity,
@@ -122,27 +147,10 @@ def webhook():
         'time_in_force': 'gtc'
     }
 
-    logging.info(
-        f"Transaction: {transaction_type}, Consecutive Count: {order_state['consecutive_count']}, Multiplier: {multiplier}, Quantity: {quantity}")
+    live_result = place_order("LIVE", ALPACA_LIVE_ENDPOINT, ALPACA_LIVE_API_KEY, ALPACA_LIVE_SECRET_KEY, order)
+    paper_result = place_order("PAPER", ALPACA_PAPER_ENDPOINT, ALPACA_PAPER_API_KEY, ALPACA_PAPER_SECRET_KEY, order)
 
-    if transaction_type == "buy":
-        response = requests.post(ALPACA_BUY_ENDPOINT, json=order, headers={
-            'APCA-API-KEY-ID': ALPACA_BUY_API_KEY,
-            'APCA-API-SECRET-KEY': ALPACA_BUY_SECRET_KEY
-        })
-        logging.info(f"Buy order placed for quantity {quantity}")
-        logging.info(response.json())
-        return response.json()
-    elif transaction_type == "sell":
-        response = requests.post(ALPACA_SELL_ENDPOINT, json=order, headers={
-            'APCA-API-KEY-ID': ALPACA_SELL_API_KEY,
-            'APCA-API-SECRET-KEY': ALPACA_SELL_SECRET_KEY
-        })
-        logging.info(f"Sell order placed for quantity {quantity}")
-        logging.info(response.json())
-        return response.json()
-    else:
-        return {"message": "wrong transaction_type"}, 400
+    return jsonify({"live": live_result, "paper": paper_result})
 
 
 @app.route('/health', methods=['GET'])
